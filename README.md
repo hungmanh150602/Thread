@@ -2,6 +2,10 @@
 
 ![alt text](image.png)
 
+> 'A thread is a single sequence stream within a process and is called a lightweight process because it is smaller and faster. It allows multiple tasks to run simultaneously, improving program efficiency.'
+
+![alt text](image-1.png)
+
 ## Why we need thread?
 
 When we create a new process:
@@ -88,6 +92,14 @@ Stack
 Thread ID
 Scheduling state
 ```
+
+Threads are needed in modern operating systems and applications because they:
+
+- **Improve Performance**: Threads allow multiple tasks to run at the same time (parallel or interleaved), making programs execute faster.
+- **Increase Responsiveness**: If one thread is busy, another can handle user actions, keeping the application responsive.
+- **Enable Concurrency**: Multiple operations like saving files, processing data, and handling user input can happen simultaneously.
+- **Better CPU Utilization**: On multi-core systems, threads can run on different cores, improving overall system performance.
+- **Efficient Resource Sharing**: Threads share the same memory and resources within a process, making communication faster and reducing overhead.
 
 ## Compare Thread and Proces
 
@@ -189,3 +201,28 @@ semaphore
 
 - calls `pthread_exit()`
 - returns from `start_routine()`
+
+# Components of Threads
+
+These are the basic components of the Operating System.
+
+- **Stack Space**: Stores local variables, function calls, and return addresses specific to the thread.
+- **Register Set**: Hold temporary data and intermediate results for the thread's execution.
+- **Program Counter**: Tracks the current instruction being executed by the thread.
+
+# Types of Threads
+
+Threads are mainly classified based on how they are managed and scheduled in an operating system. There are two primary types of threads.
+
+- User Level Thread
+- Kernel Level Thread
+
+![alt text](image-2.png)
+
+# Threading Issues
+
+- **fork() and exec()**: In multithreaded programs, fork() may duplicate all threads or just the calling thread, depending on the system. exec() replaces the entire process including all threads with the new program.
+- **Signal Handling**: Signals notify a process of events. They can be synchronous or asynchronous and are handled by either the default kernel handler or a user-defined handler.
+- **Thread Cancellation**: Threads can be terminated before completion. Cancellation can be asynchronous (immediate) or deferred (thread checks periodically). Example: stopping all threads loading a webpage.
+- **Thread-Local Storage (TLS)**: Threads share process data, but sometimes need private copies, such as unique identifiers for transactions.
+- **Scheduler Activations**: The kernel provides virtual processors, allowing a user-thread library to schedule threads efficiently.
