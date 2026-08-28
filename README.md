@@ -262,64 +262,114 @@ Thread id: 131767201687104
 Prototype:
 
 ```c
-extern int pthread_join (pthread_t __th, void **__thread_return);
+int pthread_join(
+    pthread_t thread,   /* thread id want to wait */
+    void **return_value /* the value of thread return */
+);
 ```
+
+Return value:
+
+> On success, `pthread_join()` returns 0; on error, it returns an error number.
 
 Example:
 
 ```c
-
 void *worker(void *arg)
 {
     printf("Worker: start\n");
+
+    int *rel = malloc(sizeof(int));
+
+    *rel = 123;
 
     sleep(2);
 
     printf("Worker: end\n");
 
-    return NULL;
+    return rel;
 }
 
 int main(void)
 {
     pthread_t tid;
 
+    void *ret = NULL;
+
     pthread_create(&tid, NULL, worker, NULL);
 
     printf("Main: waiting...\n");
 
-    pthread_join(tid, NULL);
+    pthread_join(tid, &ret);
 
     printf("Main: worker finished\n");
+
+    printf("%d\n", *(int *)ret);
+    free(ret);
 
     return 0;
 }
 ```
 
+```text
+Main: waiting...
+Worker: start
+Worker: end
+Main: worker finished
+123                      <-------- the return value of thread
+```
+
 Timeline:
 
 ```text
-Main thread                 Worker thread
-
-     │                           │
-     │ pthread_create()          │
-     ├──────────────────────────►│
-     │                           │
-     │                           ▼
-     │                      worker()
-     │                           │
-     │                      sleep(2)
-     │                           │
-     ▼                           │
-pthread_join() ◄────────────────┤
-     │          WAIT             │
-     │                           │
-     │                           ▼
-     │                        return
-     │◄──────────────────────────┤
-     │
-     ▼
-"worker finished"
+                         PROCESS
+┌──────────────────────────────────────────────────────────────┐
+│                                                              │
+│ MAIN THREAD                         WORKER THREAD            │
+│                                                              │
+│ pthread_create() ──────────────────────► worker()            │
+│      │                                    │                  │
+│      │                                    ├─ printf start    │
+│      │                                    │                  │
+│      │                                    ├─ malloc()        │
+│      │                                    │       │          │
+│      │                                    │       ▼          │
+│      │                                    │    HEAP          │
+│      │                                    │   [   ?   ]      │
+│      │                                     │       │         │
+│      │                                    ├─ *rel = 123      │
+│      │                                    │       │          │
+│      │                                    │       ▼          │
+│      │                                    │    [ 123 ]       │
+│      ▼                                    │                  |
+│ printf waiting                           ├─ sleep(2)         │
+│      │                                   │                   │
+│      ▼                                   │                   │
+│ pthread_join()                           │                   │
+│      │                                   │                   │
+│      │ WAIT                              │                   │
+│      │                                   ├─ printf end       │
+│      │                                   │                   │
+│      │                                   ├─ return rel       │
+│      │                                   │       │           │
+│      │                                   │       ▼           │
+│      │                                   │   return 0x5000   │
+│      │                                   │                   │
+│      ◄───────────────────────────────────┘                   │
+│      │                                                       │
+│      ▼                                                       │
+│ ret = 0x5000                                                 │
+│      │                                                       │
+│      ▼                                                       │
+│ *(int *)ret → 123                                            │
+│      │                                                       │
+│      ▼                                                       │
+│ free(ret)                                                    │
+│      │                                                       │
+│      ▼                                                       │
+│  HEAP MEMORY RELEASED                                        │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 Without `pthread_join()`, the `main` function might terminate before the thread completes its work.

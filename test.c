@@ -61,13 +61,22 @@ void *sub_10(void *arg)
     return NULL;
 }
 
-void *print_id(void * arg)
+void *print_id(void *arg)
 {
     pthread_t id = pthread_self();
 
     printf("Thread id: %lu\n", id);
 
     return NULL;
+}
+
+void *test_return(void *arg)
+{
+    int *rel = malloc(sizeof(int));
+
+    *rel = 123;
+
+    return rel;
 }
 
 int main(void)
@@ -77,14 +86,16 @@ int main(void)
     pthread_t tid1;
     pthread_t tid2;
 
-    pthread_create(&tid1,  /*  consit thread id */
-                   NULL,   /* config of thread */
+    pthread_create(&tid1,    /*  consit thread id */
+                   NULL,     /* config of thread */
                    print_id, /* function pointer */
                    NULL);    /* argument pass into function pointer */
 
-    pthread_create(&tid2,  /*  consit thread id */
-                   NULL,   /* config of thread */
-                   print_id, /* function pointer */
+    void *ret = NULL;
+
+    pthread_create(&tid2,    /*  consit thread id */
+                   NULL,     /* config of thread */
+                   test_return, /* function pointer */
                    NULL);    /* argument pass into function pointer */
 
     // pthread_join(tid, NULL);
@@ -99,6 +110,9 @@ int main(void)
     // }
 
     pthread_join(tid1, NULL);
-    pthread_join(tid2, NULL);
+    pthread_join(tid2, &ret);
+
+    printf("%d\n", *(int *)ret);
+    free(ret);
     return 0;
 }
