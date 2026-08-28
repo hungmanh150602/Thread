@@ -1,4 +1,28 @@
 # 1. Thread
+<!-- 
+```text
+        THREAD
+           │
+           ▼
+   ┌───────────────┐
+   │ Race Condition│ ⭐⭐⭐
+   └───────┬───────┘
+           ▼
+      ┌────────┐
+      │ Mutex  │ ⭐⭐⭐
+      └────┬───┘
+           ▼
+   ┌────────────────┐
+   │ Condition Var  │ ⭐⭐⭐
+   └───────┬────────┘
+           ▼
+   Producer-Consumer ⭐⭐⭐
+           │
+           ▼
+      ┌──────────┐
+      │ Deadlock │ ⭐⭐⭐
+      └──────────┘
+``` -->
 
 ![alt text](image.png)
 
@@ -148,7 +172,7 @@ POSIX threads library (libpthread, -lpthread)
 
 ## Create thread
 
-1. Prototype
+Prototype
 
 ```c
 extern int pthread_create (pthread_t *__restrict __newthread,
@@ -157,7 +181,12 @@ extern int pthread_create (pthread_t *__restrict __newthread,
       void *__restrict __arg) __THROWNL __nonnull ((1, 3));
 ```
 
-1. Example
+Return:
+
+- 0 :           if success
+- error number: if error
+
+Example
 
 ```c
 void *worker(void *arg)
@@ -186,7 +215,7 @@ int main(void)
 }
 ```
 
-1. After create thread we have:
+After create thread we have:
 
 ```text
                 Process
@@ -233,7 +262,7 @@ An examle of printing the thread ID:
 void* print_id(void* arg) {
     pthread_t my_id = pthread_self();
     
-    printf("Worker thread dang chay. ID cua toi la: %lu\n", (unsigned long)my_id);
+    printf("Thread id: %lu\n", (unsigned long)my_id);
     
     return NULL;
 }
@@ -255,6 +284,21 @@ int main() {
 Thread id: 131767210079808
 Thread id: 131767201687104
 ```
+
+### pthread_equal(id1, id2)
+
+When you want to check whether two threads have the same id, you can use `pthread_equal`.
+
+Prototype:
+
+```c
+int pthread_equal(pthread_t tid1, pthread_t tid2);
+```
+
+Return value:
+
+- nonzero : if equal
+- 0       : otherwise
 
 ## pthread_join()
 
@@ -461,3 +505,23 @@ It appears that the main function continues executing while the thread is runnin
 - **Scheduler Activations**: The kernel provides virtual processors, allowing a user-thread library to schedule threads efficiently.
 
 # 2. Thread Memory Model & Shared Data
+
+The overall picture
+
+```text
+                    PROCESS
+        ┌──────────────────────────────┐
+        │                              │
+        │   CODE       ←── shared      │
+        │   GLOBAL     ←── shared      │
+        │   HEAP       ←── shared      │
+        │                              │
+        │ ┌────────┐ ┌────────┐ ┌─────┐│
+        │ │Thread 1│ │Thread 2│ │ T3  ││
+        │ │ Stack  │ │ Stack  │ │Stack││
+        │ └────────┘ └────────┘ └─────┘│
+        │                              │
+        └──────────────────────────────┘
+```
+
+# 3. Race Condition
