@@ -376,8 +376,77 @@ Without `pthread_join()`, the `main` function might terminate before the thread 
 
 # Terminate Thread
 
-- calls `pthread_exit()`
+A thread can terminate by:
+
+- `return NULL`;
+- calls `pthread_exit(NULL)`
 - returns from `start_routine()`
+
+## pthread_exit()
+
+Prototype:
+
+```c
+void pthread_exit (void *__retval);
+```
+
+# pthread_detach()
+
+There are two way to manage thread:
+
+- **Joinable**: nead call `pthread_join()` to reclaim resource.  
+- **Detached**: auto reclaim resource after thread finished. It is not possible to `pthread_join()` it after that.
+
+Prototype:
+
+```c
+int pthread_detach (pthread_t __th);
+```
+
+Example:
+
+```c
+void *delay_1(void *arg)
+{
+    printf("Thread is delaying 5s ...\n");
+    sleep(5);
+    printf("Thread stopped!\n");
+    return NULL;
+}
+
+int main(void)
+{
+    pthread_t tid1;
+
+    pthread_create(&tid1,    /*  consit thread id */
+                   NULL,     /* config of thread */
+                   delay_1,  /* function pointer */
+                   NULL);    /* argument pass into function pointer */
+    pthread_detach(tid1);
+
+    printf("Main is still running ...\n");
+
+    pthread_join(tid1, NULL);
+    
+    sleep(1);
+
+    printf("Main stopped!\n");
+
+    return 0;
+}
+```
+
+```text
+Main is still running ...
+Thread is delaying 5s ...
+Main stopped!
+```
+
+It appears that the main function continues executing while the thread is running; I called `pthread_join()`, but it didn't work, causing the main function to terminate before the thread finished its task.
+
+**Tip**
+
+> A detached thread is suitable for a worker when you do not need to retrieve a result or wait for it to complete.
 
 # Threading Issues
 

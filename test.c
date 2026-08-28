@@ -79,40 +79,33 @@ void *test_return(void *arg)
     return rel;
 }
 
+void *delay_1(void *arg)
+{
+    printf("Thread is delaying 5s ...\n");
+    sleep(5);
+    printf("Thread stopped!\n");
+    return NULL;
+}
+
 int main(void)
 {
-    int x = 100;
+    int ret;
 
     pthread_t tid1;
-    pthread_t tid2;
 
     pthread_create(&tid1,    /*  consit thread id */
                    NULL,     /* config of thread */
-                   print_id, /* function pointer */
+                   delay_1, /* function pointer */
                    NULL);    /* argument pass into function pointer */
+    pthread_detach(tid1);
 
-    void *ret = NULL;
+    printf("Main still running ...\n");
 
-    pthread_create(&tid2,    /*  consit thread id */
-                   NULL,     /* config of thread */
-                   test_return, /* function pointer */
-                   NULL);    /* argument pass into function pointer */
+    ret = pthread_join(tid1, NULL);
+    
+    sleep(6);
+    printf("%d\n", ret);
+    printf("Main stopped!\n");
 
-    // pthread_join(tid, NULL);
-    // sleep(1);
-    // printf("Finally, x = %d\n", x);
-
-    // pid_t pid = fork();
-
-    // if (pid == 0)
-    // {
-    //     exit(10);
-    // }
-
-    pthread_join(tid1, NULL);
-    pthread_join(tid2, &ret);
-
-    printf("%d\n", *(int *)ret);
-    free(ret);
     return 0;
 }
