@@ -1,4 +1,4 @@
-# Thread
+# 1. Thread
 
 ![alt text](image.png)
 
@@ -121,7 +121,7 @@ Scheduling state
 |Inter-thread communication is very fast|A memory error can affect the entire process.|
 |Suitable for parallel/concurrent work within the same application|A deadlock can occur.|
 
-# Components of Threads
+## Components of Threads
 
 These are the basic components of the Operating System.
 
@@ -129,7 +129,7 @@ These are the basic components of the Operating System.
 - **Register Set**: Hold temporary data and intermediate results for the thread's execution.
 - **Program Counter**: Tracks the current instruction being executed by the thread.
 
-# Types of Threads
+## Types of Threads
 
 Threads are mainly classified based on how they are managed and scheduled in an operating system. There are two primary types of threads.
 
@@ -138,7 +138,7 @@ Threads are mainly classified based on how they are managed and scheduled in an 
 
 ![alt text](image-2.png)
 
-# Library
+## Library
 
 POSIX threads library (libpthread, -lpthread)
 
@@ -146,7 +146,7 @@ POSIX threads library (libpthread, -lpthread)
 #include <ptheread.h>
 ```
 
-# Create thread
+## Create thread
 
 1. Prototype
 
@@ -222,6 +222,7 @@ semaphore
 - **Monitoring and Debuging**: when printing messages to the screen (logging), including thread ID helps you identify exactly which thread is executing.
 
 Prototype:
+
 ```c
 extern pthread_t pthread_self (void);
 ````
@@ -255,7 +256,7 @@ Thread id: 131767210079808
 Thread id: 131767201687104
 ```
 
-# pthread_join()
+## pthread_join()
 
 > The current thread waits for a specific thread to finish.
 
@@ -374,7 +375,7 @@ Timeline:
 
 Without `pthread_join()`, the `main` function might terminate before the thread completes its work.
 
-# Terminate Thread
+## Terminate Thread
 
 A thread can terminate by:
 
@@ -382,7 +383,7 @@ A thread can terminate by:
 - calls `pthread_exit(NULL)`
 - returns from `start_routine()`
 
-## pthread_exit()
+### pthread_exit()
 
 Prototype:
 
@@ -390,7 +391,7 @@ Prototype:
 void pthread_exit (void *__retval);
 ```
 
-# pthread_detach()
+## pthread_detach()
 
 There are two way to manage thread:
 
@@ -416,6 +417,8 @@ void *delay_1(void *arg)
 
 int main(void)
 {
+    int ret;
+
     pthread_t tid1;
 
     pthread_create(&tid1,    /*  consit thread id */
@@ -426,10 +429,10 @@ int main(void)
 
     printf("Main is still running ...\n");
 
-    pthread_join(tid1, NULL);
+    ret = pthread_join(tid1, NULL);
     
     sleep(1);
-
+    printf("%d\n", ret);
     printf("Main stopped!\n");
 
     return 0;
@@ -439,19 +442,22 @@ int main(void)
 ```text
 Main is still running ...
 Thread is delaying 5s ...
+22                          <---- error number when using pthread_join()
 Main stopped!
 ```
 
-It appears that the main function continues executing while the thread is running; I called `pthread_join()`, but it didn't work, causing the main function to terminate before the thread finished its task.
+It appears that the main function continues executing while the thread is running; I called `pthread_join()`, but it didn't work and return an error number `22`, causing the main function to terminate before the thread finished its task.
 
 **Tip**
 
 > A detached thread is suitable for a worker when you do not need to retrieve a result or wait for it to complete.
 
-# Threading Issues
+## Threading Issues
 
 - **fork() and exec()**: In multithreaded programs, fork() may duplicate all threads or just the calling thread, depending on the system. exec() replaces the entire process including all threads with the new program.
 - **Signal Handling**: Signals notify a process of events. They can be synchronous or asynchronous and are handled by either the default kernel handler or a user-defined handler.
 - **Thread Cancellation**: Threads can be terminated before completion. Cancellation can be asynchronous (immediate) or deferred (thread checks periodically). Example: stopping all threads loading a webpage.
 - **Thread-Local Storage (TLS)**: Threads share process data, but sometimes need private copies, such as unique identifiers for transactions.
 - **Scheduler Activations**: The kernel provides virtual processors, allowing a user-thread library to schedule threads efficiently.
+
+# 2. Thread Memory Model & Shared Data

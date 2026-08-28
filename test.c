@@ -103,7 +103,7 @@ int main(void)
 
     ret = pthread_join(tid1, NULL);
     
-    sleep(6);
+    sleep(1);
     printf("%d\n", ret);
     printf("Main stopped!\n");
 
