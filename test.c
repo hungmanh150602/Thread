@@ -45,16 +45,28 @@ void *worker2(void *arg)
 void *add_10(void *x)
 {
     int *p = x;
+    printf("Thread 1 is preparing add 10 to x = %d...\n", *p);
+    sleep(0.5);
     *p = *p + 10;
-    printf("Thread 1: %d\n", *p);
+    printf("Thread 1 after add: x = %d\n", *p);
     return NULL;
 }
 
 void *sub_10(void *arg)
 {
     int *p = arg;
+    printf("Thread 2 subtract x = %d", *p);
     *p -= 10;
-    printf("Thread 2: %d\n", *p);
+    printf(" by 10, then x = %d\n", *p);
+    return NULL;
+}
+
+void *print_id(void * arg)
+{
+    pthread_t id = pthread_self();
+
+    printf("Thread id: %lu\n", id);
+
     return NULL;
 }
 
@@ -67,17 +79,17 @@ int main(void)
 
     pthread_create(&tid1,  /*  consit thread id */
                    NULL,   /* config of thread */
-                   add_10, /* function pointer */
-                   &x);    /* argument pass into function pointer */
+                   print_id, /* function pointer */
+                   NULL);    /* argument pass into function pointer */
 
     pthread_create(&tid2,  /*  consit thread id */
                    NULL,   /* config of thread */
-                   sub_10, /* function pointer */
-                   &x);    /* argument pass into function pointer */
+                   print_id, /* function pointer */
+                   NULL);    /* argument pass into function pointer */
 
     // pthread_join(tid, NULL);
-    sleep(1);
-    printf("%d\n", x);
+    // sleep(1);
+    // printf("Finally, x = %d\n", x);
 
     // pid_t pid = fork();
 

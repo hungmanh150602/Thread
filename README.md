@@ -8,7 +8,7 @@
 
 ## Why we need thread?
 
-When we create a new process:
+When we create a new **process**:
 
 ```text
 Process A
@@ -93,7 +93,7 @@ Thread ID
 Scheduling state
 ```
 
-Threads are needed in modern operating systems and applications because they:
+**Thread** are needed in modern operating systems and applications because they:
 
 - **Improve Performance**: Threads allow multiple tasks to run at the same time (parallel or interleaved), making programs execute faster.
 - **Increase Responsiveness**: If one thread is busy, another can handle user actions, keeping the application responsive.
@@ -120,6 +120,23 @@ Threads are needed in modern operating systems and applications because they:
 |Easily share memories|Need synchronization|
 |Inter-thread communication is very fast|A memory error can affect the entire process.|
 |Suitable for parallel/concurrent work within the same application|A deadlock can occur.|
+
+# Components of Threads
+
+These are the basic components of the Operating System.
+
+- **Stack Space**: Stores local variables, function calls, and return addresses specific to the thread.
+- **Register Set**: Hold temporary data and intermediate results for the thread's execution.
+- **Program Counter**: Tracks the current instruction being executed by the thread.
+
+# Types of Threads
+
+Threads are mainly classified based on how they are managed and scheduled in an operating system. There are two primary types of threads.
+
+- User Level Thread
+- Kernel Level Thread
+
+![alt text](image-2.png)
 
 # Library
 
@@ -187,9 +204,9 @@ int main(void)
               shared memory
 ```
 
-Thread has a weakness:  
+**Thread** has a weakness:  
 If thread 1 and thread 2 access simultaneously into an address, it is a **race condition**.  
-Because it need:
+Therefore, it needs:
 
 ```text
 mutex
@@ -197,27 +214,120 @@ condition variable
 semaphore
 ```
 
+## Thread ID
+
+> Thread ID is used to distinguish between threads.
+
+- **Manage threads**: When you want to control a specific thread (for example: to pause or cancel it, or to wait for it to finish using `thread_joint(id, NULL)`), you must specify it's ID.
+- **Monitoring and Debuging**: when printing messages to the screen (logging), including thread ID helps you identify exactly which thread is executing.
+
+Prototype:
+```c
+extern pthread_t pthread_self (void);
+````
+
+An examle of printing the thread ID:
+
+```c
+void* print_id(void* arg) {
+    pthread_t my_id = pthread_self();
+    
+    printf("Worker thread dang chay. ID cua toi la: %lu\n", (unsigned long)my_id);
+    
+    return NULL;
+}
+
+int main() {
+    pthread_t thread1, thread2;
+
+    pthread_create(&thread1, NULL, print_id, NULL);
+    pthread_create(&thread2, NULL, print_id, NULL);
+
+    pthread_join(thread1, NULL);
+    pthread_join(thread2, NULL);
+
+    return 0;
+}
+```
+
+```text
+Thread id: 131767210079808
+Thread id: 131767201687104
+```
+
+# pthread_join()
+
+> The current thread waits for a specific thread to finish.
+
+Prototype:
+
+```c
+extern int pthread_join (pthread_t __th, void **__thread_return);
+```
+
+Example:
+
+```c
+
+void *worker(void *arg)
+{
+    printf("Worker: start\n");
+
+    sleep(2);
+
+    printf("Worker: end\n");
+
+    return NULL;
+}
+
+int main(void)
+{
+    pthread_t tid;
+
+    pthread_create(&tid, NULL, worker, NULL);
+
+    printf("Main: waiting...\n");
+
+    pthread_join(tid, NULL);
+
+    printf("Main: worker finished\n");
+
+    return 0;
+}
+```
+
+Timeline:
+
+```text
+Main thread                 Worker thread
+
+     │                           │
+     │ pthread_create()          │
+     ├──────────────────────────►│
+     │                           │
+     │                           ▼
+     │                      worker()
+     │                           │
+     │                      sleep(2)
+     │                           │
+     ▼                           │
+pthread_join() ◄────────────────┤
+     │          WAIT             │
+     │                           │
+     │                           ▼
+     │                        return
+     │◄──────────────────────────┤
+     │
+     ▼
+"worker finished"
+```
+
+Without `pthread_join()`, the `main` function might terminate before the thread completes its work.
+
 # Terminate Thread
 
 - calls `pthread_exit()`
 - returns from `start_routine()`
-
-# Components of Threads
-
-These are the basic components of the Operating System.
-
-- **Stack Space**: Stores local variables, function calls, and return addresses specific to the thread.
-- **Register Set**: Hold temporary data and intermediate results for the thread's execution.
-- **Program Counter**: Tracks the current instruction being executed by the thread.
-
-# Types of Threads
-
-Threads are mainly classified based on how they are managed and scheduled in an operating system. There are two primary types of threads.
-
-- User Level Thread
-- Kernel Level Thread
-
-![alt text](image-2.png)
 
 # Threading Issues
 
