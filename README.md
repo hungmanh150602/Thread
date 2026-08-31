@@ -315,7 +315,8 @@ int pthread_join(
 
 Return value:
 
-> On success, `pthread_join()` returns 0; on error, it returns an error number.
+> On success, `pthread_join()` returns 0;  
+> On error, it returns an error number.
 
 Example:
 
@@ -423,9 +424,9 @@ Without `pthread_join()`, the `main` function might terminate before the thread 
 
 A thread can terminate by:
 
-- `return NULL`;
+- canceled by another thread in the same process
 - calls `pthread_exit(NULL)`
-- returns from `start_routine()`
+- returns from `routine()`
 
 ### pthread_exit()
 
@@ -496,6 +497,8 @@ It appears that the main function continues executing while the thread is runnin
 
 > A detached thread is suitable for a worker when you do not need to retrieve a result or wait for it to complete.
 
+## 
+
 ## Threading Issues
 
 - **fork() and exec()**: In multithreaded programs, fork() may duplicate all threads or just the calling thread, depending on the system. exec() replaces the entire process including all threads with the new program.
@@ -525,3 +528,340 @@ The overall picture
 ```
 
 # 3. Race Condition
+
+## What is Concurrency?
+
+> Concurrency mean that two threads run simultaneously.  
+
+In reality, only one thread is executed by the CPU at a time, but the CPU can rapidly switch between threads to create the effect of them executing in parallel.
+
+## Race Condition
+
+> A race condition is an error where the program's outcome depends on the uncontrolled order or interleaving of threads.
+
+### Critical Section
+
+> Critial section is a segment of code that accesses a shared resource that we want to control concurrent execution by multiple threads.
+
+Example i have 1000 threads add 1 to x 1000 times:
+
+```c
+#include <stdio.h>
+#include <pthread.h>
+
+void *rountine(void *arg)
+{
+    int *p = arg;
+    /* add 1 to x and loop it 1000 times*/
+    for (int i = 0; i < 1000; i++)
+    {
+        *p += 1;
+    }
+
+    return NULL;
+}
+
+int main(int argc, char *argv[])
+{
+    int x = 0;
+    /* i will create 1000 thread */
+    int numthread = 1000;
+    pthread_t thread_id[numthread];
+
+    /* create thread */
+    for (int i = 0; i < numthread; i++)
+    {
+        if (pthread_create(&thread_id[i], NULL, rountine, &x) != 0)
+        {
+            printf("Create thread %d fail.\n", i + 1);
+            return (i + 1);
+        }
+    }
+
+    /* join thread */
+    for (int i = 0; i < numthread; i++)
+    {
+        if (pthread_join(thread_id[i], NULL) != 0)
+        {
+            printf("join thread %d fail.\n", i + 1);
+            return (i + 101);
+        }
+    }
+
+    /* ptint out the value of x after 1000 thread run */
+    printf("x = %d\n", x);
+
+    return 0;
+}
+```
+
+```text
+x = 994728
+```
+
+As we expected, x must be 1000000, but actually, x is 994728. It is **race condition**.  
+How to detect race condition?
+
+```text
+① Are there multiple threads? 
+↓
+② What data do they share? 
+↓
+③ Who reads? 
+↓
+④ Who writes? 
+↓
+⑤ Can accesses occur concurrently? 
+↓
+⑥ Is there synchronization? 
+↓
+⑦ Does the result depend on the execution order?
+```
+
+We can fix it by using a variable `lock` following example below:
+
+```c
+void *rountine(void *arg)
+{
+    int *p = arg;
+    /* add 1 to x and loop it 1000 times*/
+    for (int i = 0; i < 1000; i++)
+    {
+        while(lock == 1)
+        {
+            /* wait until lock = 0 */
+        }
+        lock = 1;
+        *p += 1;
+        lock = 0;
+    }
+
+    return NULL;
+}
+```
+
+Using a variable `lock` to lock a segment code is a good idea, but the way I carried it out was terrible.  
+In fact, we have a interface in `phtread` library that allows us to do that. `pthread_mutex`
+
+# 4. Thread Synchronization
+
+## pthread_mutex
+
+> Mutex = Mutual Exclusion
+
+A mutex is basically a lock that we set (lock) before accessing a shared resource and release (unlock) when we’re done.
+
+Declare:
+
+```c
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+```
+
+Basic structual:
+
+```c
+pthread_mutex_lock(&mutex);
+/*
+ * critical section
+ */
+pthread_mutex_unlock(&mutex);
+```
+
+Example:
+
+```c
+#include <stdio.h>
+#include <pthread.h>
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void *rountine(void *arg)
+{
+    int *p = arg;
+    /* add 1 to x and loop it 1000 times*/
+    for (int i = 0; i < 1000; i++)
+    {
+        pthread_mutex_lock(&mutex);
+        *p += 1;
+        pthread_mutex_unlock(&mutex);
+    }
+
+    return NULL;
+}
+
+int main(int argc, char *argv[])
+{
+    int x = 0;
+    /* i will create 1000 thread */
+    int numthread = 1000;
+    pthread_t thread_id[numthread];
+
+
+    /* create thread */
+    for (int i = 0; i < numthread; i++)
+    {
+        if (pthread_create(&thread_id[i], NULL, rountine, &x) != 0)
+        {
+            printf("Create thread %d fail.\n", i + 1);
+            return (i + 1);
+        }
+    }
+
+    /* join thread */
+    for (int i = 0; i < numthread; i++)
+    {
+        if (pthread_join(thread_id[i], NULL) != 0)
+        {
+            printf("join thread %d fail.\n", i + 1);
+            return (i + 101);
+        }
+    }
+
+    /* ptint out the value of x after 1000 thread run */
+    printf("x = %d\n", x);
+
+    return 0;
+}
+```
+
+```text
+x = 1000000
+```
+
+That's right, the results are exactly as we expected.
+
+**A quick note:**  
+If thread 1 uses `pthread_mutex_lock` but thread 2 doesn't use it, thread 2 can still access the variable being protected by thread 1.  
+  
+Example:
+
+```c
+#include <stdio.h>
+#include <pthread.h>
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void *rountine(void *arg)
+{
+    int *p = arg;
+    /* add 1 to x and loop it 1000 times*/
+    for (int i = 0; i < 1000; i++)
+    {
+        pthread_mutex_lock(&mutex);
+        *p += 1;
+        pthread_mutex_unlock(&mutex);
+    }
+
+    return NULL;
+}
+
+void *rountine1(void *arg)
+{
+    int *p = arg;
+    /* add 1 to x and loop it 1000 times*/
+    for (int i = 0; i < 1000; i++)
+    {
+        *p += 1;
+    }
+
+    return NULL;
+}
+
+int main(int argc, char *argv[])
+{
+    int x = 0;
+    /* i will create 1000 thread */
+    int numthread = 1000;
+    pthread_t thread_id[numthread];
+    pthread_t id;
+
+
+    /* create thread use mutex lock */
+    for (int i = 0; i < numthread; i++)
+    {
+        if (pthread_create(&thread_id[i], NULL, rountine, &x) != 0)
+        {
+            printf("Create thread %d fail.\n", i + 1);
+            return (i + 1);
+        }
+    }
+
+    /* create thread that doesn't use mutex lock */
+    pthread_create(&id, NULL, rountine1, &x);
+
+    /* join thread */
+    for (int i = 0; i < numthread; i++)
+    {
+        if (pthread_join(thread_id[i], NULL) != 0)
+        {
+            printf("join thread %d fail.\n", i + 1);
+            return (i + 101);
+        }
+    }
+
+    /* join thread */
+    pthread_join(id, NULL);
+
+    /* ptint out the value of x after 1000 thread run */
+    printf("x = %d\n", x);
+
+    return 0;
+}
+```
+
+```text
+x = 1000954
+```
+
+The result I expected is 1001000 but as we can see, it is 1000954. Why is that? Because there is a thread that does not use the mutex, so it can access the variable x while it is being protected. It is race condition.
+
+### trylock
+
+Example:
+
+```c
+#include <stdio.h>
+#include <pthread.h>
+#include <unistd.h>
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void *routine1(void *arg)
+{
+    printf("Thread 1 will lock and sleep 5 seconds.\n");
+    pthread_mutex_lock(&mutex);
+    sleep(5);
+    pthread_mutex_unlock(&mutex);
+    printf("Thread 1 unlock.\n");
+    return NULL;
+}
+
+void *routine2(void *arg)
+{
+    sleep(1);
+    printf("Thread 2 try to lock during the thread 1 lock.\n");
+    if(pthread_mutex_trylock(&mutex) == 0)
+    {
+
+    }
+    else
+    {
+        printf("Thread 2 try to lock fail.\n");
+    }
+
+    return NULL;
+}
+
+int main(int argc, char *argv[])
+{
+    pthread_t thid1, thid2;
+
+    pthread_create(&thid1, NULL, routine1, NULL);
+    pthread_create(&thid2, NULL, routine2, NULL);
+
+    pthread_join(thid1, NULL);
+    pthread_join(thid2, NULL);
+
+    return 0;
+}
+```
