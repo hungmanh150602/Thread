@@ -497,7 +497,7 @@ It appears that the main function continues executing while the thread is runnin
 
 > A detached thread is suitable for a worker when you do not need to retrieve a result or wait for it to complete.
 
-## 
+##
 
 ## Threading Issues
 
@@ -865,3 +865,126 @@ int main(int argc, char *argv[])
     return 0;
 }
 ```
+
+## Atomic instructions
+
+**Define:**
+
+> An operation is observed as a unit that can not be interleaved by another thread.
+
+### Compare-and-Swap — CAS
+
+Concept:
+
+```text
+CAS(address, expected, new_value)
+```
+
+## spin lock
+
+Concept:
+
+```c
+while (CAS(&lock, 0, 1) != SUCCESS)
+{
+    // wait
+}
+```
+
+```text
+              lock = 0
+                  │
+          ┌───────┴───────┐
+          ▼               ▼
+         T1               T2
+          │               │
+       CAS 0→1         CAS 0→1
+          │               │
+       SUCCESS           FAIL
+          │               │
+          ▼               ▼
+       ENTER            WAIT
+       critical            │
+       section             │
+          │                │
+       unlock              │
+          │                │
+          └────────────► retry
+```
+
+**Spin lock has a problem**:  
+If thread 1 is occupying the critical section, thread 2 will continously attempt to access it until successful. Therefore, thread 2 consumes CPU to wait. This is **Busy Waiting/ Spinning**.
+
+## Blocking Lock
+
+Thread 2 will no longer attempt to access the critical section; instead, it will enter a sleep state and be awakened by the system when Thread 1 unlocks it.
+
+```text
+T1 lock()
+
+T2
+ │
+ └── lock()
+       │
+       ▼
+    unavailable
+       │
+       ▼
+      SLEEP
+       │
+       │
+    mutex available
+       │
+       ▼
+     WAKE
+       │
+       ▼
+    acquire
+```
+
+**Compare between Spin lock and Blocking lock**:
+
+| | Spinlock | Blocking lock |
+| :----------------- | :------------------- | :-------------------- |
+| When lock is busy | CPU keeps running | Thread sleeps |
+| CPU usage | High | Low |
+| Context switch | Not immediately required | May occur |
+| Short hold time | Good | Potential overhead |
+| Long hold time | Poor | Good |
+| Implementation | Atomic instructions | Atomic + wait/wakeup |
+
+## Futex
+
+> futex = fast userspace mutex
+
+Futex is a Linux mechanism provided to support:  
+
+> wait/wake giữa threads dựa trên một giá trị trong userspace.
+
+# 5. Mars Pathfinder & Priority Inversion
+
+## Mars Pathfinder
+
+In 1997, the Mars Pathfinder spacecraft was operating on Mars.
+
+Its onboard system utilized the VxWorks real-time operating system.
+
+A shared resource was protected by a synchronization mechanism.
+
+A low-priority task held the resource.
+
+A high-priority task required that resource.
+
+Subsequently, a medium-priority task began executing.
+
+As a result, the high-priority task was blocked for longer than expected.
+
+The system featured a watchdog timer; when a critical task failed to execute within the expected timeframe, the system would reset.
+
+The situation was identified as priority inversion, and the control team resolved it using a priority inheritance mechanism.
+
+## Priority Inversion
+
+> A mutex solves the race condition problem but introduces a new issue: priority inversion. A higher-priority thread can be blocked by a lower-priority thread.
+
+## Solution: Priority Inheritance
