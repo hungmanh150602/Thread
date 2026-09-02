@@ -988,3 +988,390 @@ The situation was identified as priority inversion, and the control team resolve
 > A mutex solves the race condition problem but introduces a new issue: priority inversion. A higher-priority thread can be blocked by a lower-priority thread.
 
 ## Solution: Priority Inheritance
+
+If a high-priority thread is waiting for a mutex held by a low-priority thread, temporarily raise the priority of the low-priority thread.
+
+Timeline after Priority Inheritance is implemented:
+
+```text
+        L                 H                 M
+        │                 │                 │
+t1      LOCK
+        │
+        │ priority = LOW
+        │
+t2                        LOCK
+                          │
+                          BLOCK
+                          │
+t3      priority ↑
+        LOW → HIGH
+        │
+        RUN
+        │
+t4      critical section
+        │
+t5      UNLOCK
+        │
+        ▼
+        H wakes
+```
+
+After L unlock:
+
+```text
+L priority
+HIGH → LOW
+```
+
+## Lessons from Mars Pathfinder
+
+- Mutex solves race conditions but does not solve every concurrency problem.
+- Critical section must be carefully designed.
+
+```text
+short
+predictable
+bounded
+```
+
+- Scheduling and synchronization are closely related.
+
+We don't research Mutex in complete isolation from:
+
+```text
+scheduler
+priority
+blocking
+wakeup
+```
+
+# 6. Reader-Writer Lock
+
+> A Reader-Writer Lock (rwlock) is a synchronization primitive designed for scenarios where a shared resource involves two types of access:
+
+- Reader: only read
+- writer: change data
+
+Basic rules:
+
+```text
+              Shared Data
+                  │
+        ┌─────────┴─────────┐
+        │                   │
+     READERS              WRITER
+        │                   │
+    Multiple users       A single
+    simultaneously         user
+```
+
+If there are only readers:
+
+```text
+T1 ── READ ──┐
+T2 ── READ ──┤
+T3 ── READ ──┤──► shared data
+T4 ── READ ──┘
+```
+
+But when a writer appears:
+
+```text
+T1 ── READ ──┐
+T2 ── READ ──┤
+T3 ── READ ──┘
+
+W ─────────────── WAIT
+```
+
+The writer must wait for all current readers to release the lock.
+
+## Prototype in POSIC Thread
+
+POSIC Thread provide: `pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER`
+
+Prototype:
+
+**Reader:**
+
+```c
+    pthread_rwlock_rdlock(&rwlock);
+    printf("%d\n", x);
+    pthread_rwlock_unlock(&rwlock);
+```
+
+**Writer:**
+
+```c
+    pthread_rwlock_wrlock(&rwlock);
+    x += 10;
+    pthread_rwlock_unlock(&rwlock);
+```
+
+## When we use rwlock?
+
+rwlock is suitable when:
+
+```text
+Many readers
+Few writers
+```
+
+When reader = writer, mutex may be a better choice. Because the writer appears frequently, yet readers are constantly kept waiting for them.
+
+**Disadvantages of rwlock:**
+
+- more complex than a `mutex`
+- If readers keep arriving, the writer might have to wait a very long time, and vice versa.
+
+# 7. Reentrancy & Thread-Specific Data
+
+A function is called reentrant if multiple executions of the function can occur concurrently without corrupting each other's state.
+
+Example:
+
+```c
+int add(int a, int b)
+{
+return a + b;
+}
+```
+
+Two threads call it concurrently:
+
+```text
+T1 → add(1, 2)
+T2 → add(10, 20)
+```
+
+There are no issues because the function does not use shared mutable state.
+
+```text
+add()
+/     \
+T1       T2
+│         │
+local       local
+data        data
+```
+
+Each invocation has its own state.
+
+## Shared multiple state
+
+```c
+char *get_name(void)
+{
+static char buffer[100]; 
+
+strcpy(buffer, "Hung"); 
+
+return buffer;
+}
+```
+
+A single thread:
+
+```c
+char *p = get_name();
+```
+
+can run normally.
+
+But if multiple threads call it:
+
+```text
+T1 ── get_name()
+T2 ── get_name()
+```
+
+both use the same:
+
+```c
+static char buffer[100];
+```
+
+This is ***shared mutable state.***
+
+The timeline could be:
+
+```text
+T1                         T2
+│                          │
+│ write "Hung"             │
+│                          │
+│                          │ write "ABC"
+│                          │
+│ return buffer            │
+│                          │
+▼                          ▼
+```
+
+Both operate on the same buffer.
+
+This function is ***not reentrant***.
+
+## Note
+
+A function may be a non-reentrant if it use:
+
+- Static mutable data
+- Global mutable data
+- Shared buffer
+- Shared resource is not synchronizied
+
+## Thread-Specific Data
+
+> Each thread has specific data.
+
+Example:
+
+```text
+              function
+                  │
+        ┌─────────┼─────────┐
+        ▼         ▼         ▼
+       T1        T2        T3
+        │         │         │
+     buffer    buffer    buffer
+      riêng      riêng      riêng
+```
+
+Consider the following scenario:  
+The data isn't global across all threads, yet you don't want to pass it through every function parameter—even though the code might use the same key.
+
+***POSIX provides pthread_key_t.***
+
+```c
+pthread_key_t key;
+```
+
+Create key:
+
+```c
+int pthread_key_create (pthread_key_t *__key,
+               void (*__destr_function) (void *))
+```
+
+Set:
+
+```c
+int pthread_setspecific (pthread_key_t __key,
+            const void *__pointer)
+```
+
+Get:
+
+```c
+void *pthread_getspecific (pthread_key_t __key)
+/* Example */
+void *value = pthread_getspecific(key);
+```
+
+Example:
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <pthread.h>
+
+pthread_key_t buffer_key;
+
+void destructor(void *ptr)
+{
+    printf("Free buffer\n");
+    free(ptr);
+}
+
+void process_data(const char *data)
+{
+    char *buffer = pthread_getspecific(buffer_key);
+
+    snprintf(buffer, 1024, "Processed: %s", data);
+
+    printf("Thread %lu: buffer = %p, content = %s\n",
+           pthread_self(), (void *)buffer, buffer);
+}
+
+void log_data(void)
+{
+    char *buffer = pthread_getspecific(buffer_key);
+
+    printf("Thread %lu: buffer = %p, content = %s\n",
+           pthread_self(), (void *)buffer, buffer);
+}
+
+void *worker(void *arg)
+{
+    char *buffer = malloc(1024);
+
+    pthread_setspecific(buffer_key, buffer);
+
+    printf("Thread %lu: set buffer = %p\n",pthread_self(), (void *)buffer);
+
+    process_data("Hello");
+    log_data();
+
+    return NULL;
+}
+
+int main(void)
+{
+    pthread_t t1, t2;
+
+    pthread_key_create(&buffer_key, destructor);
+
+    pthread_create(&t1, NULL, worker, NULL);
+    pthread_create(&t2, NULL, worker, NULL);
+
+    pthread_join(t1, NULL);
+    pthread_join(t2, NULL);
+
+    pthread_key_delete(buffer_key);
+
+    return 0;
+}
+```
+
+When we use thread specific data?
+
+```text
+"Many threads"
+       +
+"Each thread needs its own state"
+       +
+"That state must survive across multiple function calls"
+```
+
+TSD only starts to become helpful when the call graph looks like this:
+
+```c
+void A()
+{
+    B();
+}
+
+void B()
+{
+    C();
+}
+
+void C()
+{
+    // need data of thread
+}
+```
+
+Function C can do: `pthread_getspecific(key)` without needing do:
+
+```c
+A(buffer);
+B(buffer);
+C(buffer);
+```
+
+# 8. Threads and Signals
+
+***Signal = an asynchronous notification sent to a process or thread.***

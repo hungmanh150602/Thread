@@ -9,9 +9,12 @@ CASE 6 : race condition
 CASE 7 : thread cleanup
 CASE 8 : mutex
 CASE 9 : trylock
+CASE 10 : Read-Write Lock
+CASE 11 : Thread-Specific Data
+CASE 12 : Thread and signal
 */
 
-#define CASE 9
+#define CASE 8
 
 #if CASE == 0
 #include <stdio.h>
@@ -517,7 +520,6 @@ int main(int argc, char *argv[])
     pthread_t thread_id[numthread];
     pthread_t id;
 
-
     /* create thread */
     for (int i = 0; i < numthread; i++)
     {
@@ -570,9 +572,8 @@ void *routine2(void *arg)
 {
     sleep(1);
     printf("Thread 2 try to lock during the thread 1 lock.\n");
-    if(pthread_mutex_trylock(&mutex) == 0)
+    if (pthread_mutex_trylock(&mutex) == 0)
     {
-
     }
     else
     {
@@ -591,6 +592,213 @@ int main(int argc, char *argv[])
 
     pthread_join(thid1, NULL);
     pthread_join(thid2, NULL);
+
+    return 0;
+}
+#elif CASE == 10
+#include <stdio.h>
+#include <pthread.h>
+#include <unistd.h>
+
+pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
+
+int x = 0;
+
+void *reader(void *arg)
+{
+    sleep(0.5);
+    printf("Thread read x:\n");
+    pthread_rwlock_rdlock(&rwlock);
+    printf("%d\n", x);
+    pthread_rwlock_unlock(&rwlock);
+
+    return NULL;
+}
+
+void *writer(void *arg)
+{
+    printf("Thread will add 10 to x.\n");
+    pthread_rwlock_wrlock(&rwlock);
+    x += 10;
+    pthread_rwlock_unlock(&rwlock);
+    printf("Thread write unlock.\n");
+    return NULL;
+}
+
+int main(int argc, char *argv[])
+{
+    pthread_t thid1[10000], thid2;
+
+    /* create 10000 thread reader  */
+    for (int i = 0; i < 10000; i++)
+    {
+        if (pthread_create(&thid1[i], NULL, reader, NULL) != 0)
+        {
+            printf("Create thread %d fail.\n", i + 1);
+            return (i + 1);
+        }
+    }
+    /* create thread writer */
+    pthread_create(&thid2, NULL, writer, NULL);
+
+    /* join thread reader */
+    for (int i = 0; i < 10000; i++)
+    {
+        if (pthread_join(thid1[i], NULL) != 0)
+        {
+            printf("Join thread %d fail.\n", i + 1);
+            return (i + 1);
+        }
+    }
+
+    /* join thread writer */
+    pthread_join(thid2, NULL);
+
+    return 0;
+}
+#elif CASE == 11
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <stdbool.h>
+
+pthread_key_t buffer_key;
+
+struct data
+{
+    int number;
+    char text[20];
+    bool state;
+};
+
+
+void destructor(void *ptr)
+{
+    printf("Free buffer %p\n", ptr);
+    free(ptr);
+}
+
+void process_data(const char *data)
+{
+    struct data *buffer = pthread_getspecific(buffer_key);
+
+    snprintf(buffer->text, sizeof(buffer->text), "%s", data);
+
+    printf("Thread %lu: buffer = %p, content = %s\n",
+           pthread_self(), (void *)buffer, buffer->text);
+}
+
+void log_data(void)
+{
+    struct data *buffer = pthread_getspecific(buffer_key);
+
+    printf("Thread %lu: buffer = %p, content = %s\n",
+           pthread_self(), (void *)buffer, buffer->text);
+}
+
+void *routine(void *arg)
+{
+    struct data *buffer = malloc(sizeof(struct data));
+
+    pthread_setspecific(buffer_key, buffer);
+
+    printf("Thread %lu: set buffer = %p\n", pthread_self(), (void *)buffer);
+
+    if (*(int *)arg == 1)
+    {
+        process_data("Hello1");
+        sleep(1);
+        log_data();
+    }
+    else
+    {
+        process_data("Hello2");
+    }
+
+    log_data();
+
+    return NULL;
+}
+
+int main(void)
+{
+    pthread_t t1, t2;
+    int id[2] = {1, 2};
+
+    pthread_key_create(&buffer_key, destructor);
+
+    pthread_create(&t1, NULL, routine, &id[0]);
+    pthread_create(&t2, NULL, routine, &id[1]);
+
+    pthread_join(t1, NULL);
+    pthread_join(t2, NULL);
+
+    pthread_key_delete(buffer_key);
+
+    return 0;
+}
+#elif CASE == 12
+#include <stdio.h>
+#include <pthread.h>
+#include <signal.h>
+#include <unistd.h>
+
+void signal_handler(int sig)
+{
+    printf("Thread %lu received signal %d\n",
+           pthread_self(), sig);
+}
+
+void *routine(void *arg)
+{
+    int id = *(int *)arg;
+
+    printf("Thread %d is running.\n", id);
+
+    while(1)
+    {
+        sleep(1);
+    }
+
+    printf("Thread %d is stopped.\n", id);
+    return NULL;
+}
+
+int main(int argc, char *argv[])
+{
+    int numthread = 5;
+    int id[] = {1, 2, 3, 4, 5};
+    pthread_t thread_id[numthread];
+
+    /* create signal */
+    signal(SIGTERM, signal_handler);
+
+    /* create thread */
+    for (int i = 0; i < numthread; i++)
+    {
+        if (pthread_create(&thread_id[i], NULL, routine, &id[i]) != 0)
+        {
+            printf("Create thread %d fail.\n", i + 1);
+            return (i + 1);
+        }
+    }
+
+    sleep(5);
+
+    /* send signal to thread */
+    pthread_kill(thread_id[2], SIGTERM);
+
+    /* join thread */
+    for (int i = 0; i < numthread; i++)
+    {
+        if (pthread_join(thread_id[i], NULL) != 0)
+        {
+            printf("join thread %d fail.\n", i + 1);
+            return (i + 101);
+        }
+    }
 
     return 0;
 }
