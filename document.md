@@ -1,102 +1,7 @@
-# 1. Thread
-<!-- 
-```text
-        THREAD
-           │
-           ▼
-   ┌───────────────┐
-   │ Race Condition│ ⭐⭐⭐
-   └───────┬───────┘
-           ▼
-      ┌────────┐
-      │ Mutex  │ ⭐⭐⭐
-      └────┬───┘
-           ▼
-   ┌────────────────┐
-   │ Condition Var  │ ⭐⭐⭐
-   └───────┬────────┘
-           ▼
-   Producer-Consumer ⭐⭐⭐
-           │
-           ▼
-      ┌──────────┐
-      │ Deadlock │ ⭐⭐⭐
-      └──────────┘
-``` -->
+# 1. What is thread?
+[![image.png](http://10.0.0.220:9090/uploads/images/gallery/2026-09/scaled-1680-/image.png)](http://10.0.0.220:9090/uploads/images/gallery/2026-09/image.png)
 
-![alt text](image.png)
-
-> 'A thread is a single sequence stream within a process and is called a lightweight process because it is smaller and faster. It allows multiple tasks to run simultaneously, improving program efficiency.'
-
-![alt text](image-1.png)
-
-## Why we need thread?
-
-When we create a new **process**:
-
-```text
-Process A
-┌──────────────────────────────┐
-│ Address Space                │
-│                              │
-│ Code                         │
-│ Data                         │
-│ Heap                         │
-│ Stack                        │
-│                              │
-│ File descriptors             │
-└──────────────────────────────┘
-             │
-           fork()
-             │
-             ▼
-Process B
-┌──────────────────────────────┐
-│ Address Space                │
-│ Code                         │
-│ Data                         │
-│ Heap                         │
-│ Stack                        │
-│                              │
-│ File descriptors             │
-└──────────────────────────────┘
-```
-
-Each process have specific address space.  
-If you want to communication A and B, you need IPC:
-
-- pipe
-- share memory
-- socket
-- message queue
-- . . .
-
-**Thread** is different.  
-Thread inside process
-
-```text
-                 Process
-┌─────────────────────────────────────┐
-│                                     │
-│   Shared Address Space              │
-│                                     │
-│   Code                              │
-│   Global data                       │
-│   Heap                              │
-│                                     │
-│      ┌─────────────┐                │
-│      │ Main Thread │                │
-│      │ Stack       │                │
-│      └─────────────┘                │
-│                                     │
-│      ┌─────────────┐                │
-│      │ Worker      │                │
-│      │ Thread      │                │
-│      │ Stack       │                │
-│      └─────────────┘                │
-│                                     │
-└─────────────────────────────────────┘
-```
+> *"A thread is a single sequence stream within a process and is called a lightweight process because it is smaller and faster. It allows multiple tasks to run simultaneously, improving program efficiency."*
 
 Threads share:
 
@@ -117,6 +22,10 @@ Thread ID
 Scheduling state
 ```
 
+[![image-1.png](http://10.0.0.220:9090/uploads/images/gallery/2026-09/scaled-1680-/image-1.png)](http://10.0.0.220:9090/uploads/images/gallery/2026-09/image-1.png)
+
+## 1.1 Why we need thread?
+
 **Thread** are needed in modern operating systems and applications because they:
 
 - **Improve Performance**: Threads allow multiple tasks to run at the same time (parallel or interleaved), making programs execute faster.
@@ -125,7 +34,7 @@ Scheduling state
 - **Better CPU Utilization**: On multi-core systems, threads can run on different cores, improving overall system performance.
 - **Efficient Resource Sharing**: Threads share the same memory and resources within a process, making communication faster and reducing overhead.
 
-## Compare Thread and Proces
+## 1.2 Compare Thread and Proces
 
 **Process**
 
@@ -145,22 +54,23 @@ Scheduling state
 |Inter-thread communication is very fast|A memory error can affect the entire process.|
 |Suitable for parallel/concurrent work within the same application|A deadlock can occur.|
 
-## Components of Threads
+## 1.3 Components of Threads
 
 These are the basic components of the Operating System.
 
+- **Thread id**: Each thread has a thread ID to determine what thread is running.
 - **Stack Space**: Stores local variables, function calls, and return addresses specific to the thread.
 - **Register Set**: Hold temporary data and intermediate results for the thread's execution.
 - **Program Counter**: Tracks the current instruction being executed by the thread.
 
-## Types of Threads
+## 1.4 Types of Threads
 
 Threads are mainly classified based on how they are managed and scheduled in an operating system. There are two primary types of threads.
 
 - User Level Thread
 - Kernel Level Thread
 
-![alt text](image-2.png)
+[![image-2.png](http://10.0.0.220:9090/uploads/images/gallery/2026-09/scaled-1680-/image-2.png)](http://10.0.0.220:9090/uploads/images/gallery/2026-09/image-2.png)
 
 **User-Level Threads (ULTs)**
 
@@ -181,47 +91,44 @@ Threads are mainly classified based on how they are managed and scheduled in an 
 - Implementation is more complex and requires frequent interaction with the kernel.
 - Large numbers of threads may add extra load on the kernel scheduler, potentially affecting performance.
 
-## Library
+# 2. How to create thread?
 
-POSIX threads library (libpthread, -lpthread)
+On Linux, the common API for thread programming is POSIX Threads, often referred to as: `pthread`
+
+**Library:**
 
 ```c
 #include <ptheread.h>
 ```
 
-## Create thread
+Create thread:
 
-Prototype
+**Prototype**
 
 ```c
-extern int pthread_create (pthread_t *__restrict __newthread,
+int pthread_create (pthread_t *__restrict __newthread,
       const pthread_attr_t *__restrict __attr,
       void *(*__start_routine) (void *),
       void *__restrict __arg) __THROWNL __nonnull ((1, 3));
 ```
 
-Return:
+**Return:**
 
 - 0 :           if success
 - error number: if error
 
-Example
+**Example**
 
 ```c
+/* routine function thread will execute when it is created */
 void *worker(void *arg)
 {
-    int *p = arg;
-
-    (*p)++;
-
     printf("Hello from thread %d\n", *p);
     return NULL;
 }
 
 int main(void)
 {
-    int x = 100;
-
     pthread_t tid;
 
     pthread_create(&tid,   /*  consit thread id */
@@ -234,26 +141,8 @@ int main(void)
 }
 ```
 
-After create thread we have:
+**Thread** has a weakness: If thread 1 and thread 2 access simultaneously into an address, it is a **race condition**.  
 
-```text
-                Process
-                   │
-        ┌──────────┴──────────┐
-        │                     │
-   Main Thread            Worker Thread
-        │                     │
-     main()                worker()
-        │                     │
-        │                  arg = &x
-        │                     │
-        └──────────┬──────────┘
-                   │
-              shared memory
-```
-
-**Thread** has a weakness:  
-If thread 1 and thread 2 access simultaneously into an address, it is a **race condition**.  
 Therefore, it needs:
 
 ```text
@@ -262,7 +151,7 @@ condition variable
 semaphore
 ```
 
-## Thread ID
+## 2.1 Thread ID
 
 > Thread ID is used to distinguish between threads.
 
@@ -304,22 +193,14 @@ Thread id: 131767210079808
 Thread id: 131767201687104
 ```
 
-### pthread_equal(id1, id2)
-
-When you want to check whether two threads have the same id, you can use `pthread_equal`.
-
-Prototype:
-
-```c
-int pthread_equal(pthread_t tid1, pthread_t tid2);
-```
+> When you want to check whether two threads have the same id, you can use `pthread_equal(id1, id2)`.
 
 Return value:
 
 - nonzero : if equal
 - 0       : otherwise
 
-## pthread_join()
+## 2.2 pthread_join()
 
 > The current thread waits for a specific thread to finish.
 
@@ -384,62 +265,9 @@ Main: worker finished
 123                      <-------- the return value of thread
 ```
 
-Timeline:
-
-```text
-                         PROCESS
-┌──────────────────────────────────────────────────────────────┐
-│                                                              │
-│ MAIN THREAD                         WORKER THREAD            │
-│                                                              │
-│ pthread_create() ──────────────────────► worker()            │
-│      │                                    │                  │
-│      │                                    ├─ printf start    │
-│      │                                    │                  │
-│      │                                    ├─ malloc()        │
-│      │                                    │       │          │
-│      │                                    │       ▼          │
-│      │                                    │    HEAP          │
-│      │                                    │   [   ?   ]      │
-│      │                                     │       │         │
-│      │                                    ├─ *rel = 123      │
-│      │                                    │       │          │
-│      │                                    │       ▼          │
-│      │                                    │    [ 123 ]       │
-│      ▼                                    │                  |
-│ printf waiting                           ├─ sleep(2)         │
-│      │                                   │                   │
-│      ▼                                   │                   │
-│ pthread_join()                           │                   │
-│      │                                   │                   │
-│      │ WAIT                              │                   │
-│      │                                   ├─ printf end       │
-│      │                                   │                   │
-│      │                                   ├─ return rel       │
-│      │                                   │       │           │
-│      │                                   │       ▼           │
-│      │                                   │   return 0x5000   │
-│      │                                   │                   │
-│      ◄───────────────────────────────────┘                   │
-│      │                                                       │
-│      ▼                                                       │
-│ ret = 0x5000                                                 │
-│      │                                                       │
-│      ▼                                                       │
-│ *(int *)ret → 123                                            │
-│      │                                                       │
-│      ▼                                                       │
-│ free(ret)                                                    │
-│      │                                                       │
-│      ▼                                                       │
-│  HEAP MEMORY RELEASED                                        │
-│                                                              │
-└──────────────────────────────────────────────────────────────┘
-```
-
 Without `pthread_join()`, the `main` function might terminate before the thread completes its work.
 
-## Terminate Thread
+## 2.3 Terminate Thread
 
 A thread can terminate by:
 
@@ -447,15 +275,79 @@ A thread can terminate by:
 - calls `pthread_exit(NULL)`
 - returns from `routine()`
 
-### pthread_exit()
-
-Prototype:
+Example using `pthread_cancel()`:
 
 ```c
-void pthread_exit (void *__retval);
+#include <stdio.h>
+#include <pthread.h>
+#include <string.h>
+#include <unistd.h>
+
+pthread_t thread_id[2];
+/*
+This function will be implemented by thread 1 and thread 2.
+*/
+void *rountine(void *arg)
+{
+    /*
+    Thread 1 implement
+    */
+    if (pthread_equal(pthread_self(), thread_id[0]))
+    {
+        printf("Thread 1 will sleep in 5 seconds.\n");
+        sleep(5);
+    }
+    /*
+    Thread 2 implement
+    */
+    else if (pthread_equal(pthread_self(), thread_id[1]))
+    {
+        printf("Thread 2 will cancel thread 1.\n");
+        pthread_cancel(thread_id[0]);
+    }
+    return NULL;
+}
+
+int main(int argc, char *argv[])
+{
+    /* create two threads */
+    for (int i = 0; i < 2; i++)
+    {
+        if (pthread_create(&thread_id[i], NULL, rountine, NULL) != 0)
+        {
+            printf("Create thread %d fail!\n", i + 1);
+            return (i + 1);
+        }
+    }
+
+    /* join thread and get the return value of thread_join */
+    for (int i = 0; i < 2; i++)
+    {
+        int ret = pthread_join(thread_id[i], NULL);
+        if (ret != 0)
+        {
+            printf("Create thread %d fail!\n", i + 1);
+            return (i + 1);
+        }
+        else
+        {
+            printf("Thread %d exit with return value: %d (%s)\n",
+                   i + 1, ret, strerror(ret));
+        }
+    }
+
+    return 0;
+}
 ```
 
-## pthread_detach()
+```text
+Thread 1 will sleep in 5 seconds.
+Thread 2 will cancel thread 1.
+Thread 1 exit with return value: 0 (Success)
+Thread 2 exit with return value: 0 (Success)
+```
+
+## 2.4 pthread_detach()
 
 There are two way to manage thread:
 
@@ -468,7 +360,7 @@ Prototype:
 int pthread_detach (pthread_t __th);
 ```
 
-Example:
+Example:  
 
 ```c
 void *delay_1(void *arg)
@@ -516,43 +408,15 @@ It appears that the main function continues executing while the thread is runnin
 
 > A detached thread is suitable for a worker when you do not need to retrieve a result or wait for it to complete.
 
-## Threading Issues
-
-- **fork() and exec()**: In multithreaded programs, fork() may duplicate all threads or just the calling thread, depending on the system. exec() replaces the entire process including all threads with the new program.
-- **Signal Handling**: Signals notify a process of events. They can be synchronous or asynchronous and are handled by either the default kernel handler or a user-defined handler.
-- **Thread Cancellation**: Threads can be terminated before completion. Cancellation can be asynchronous (immediate) or deferred (thread checks periodically). Example: stopping all threads loading a webpage.
-- **Thread-Local Storage (TLS)**: Threads share process data, but sometimes need private copies, such as unique identifiers for transactions.
-- **Scheduler Activations**: The kernel provides virtual processors, allowing a user-thread library to schedule threads efficiently.
-
-# 2. Thread Memory Model & Shared Data
-
-The overall picture
-
-```text
-                    PROCESS
-        ┌──────────────────────────────┐
-        │                              │
-        │   CODE       ←── shared      │
-        │   GLOBAL     ←── shared      │
-        │   HEAP       ←── shared      │
-        │                              │
-        │ ┌────────┐ ┌────────┐ ┌─────┐│
-        │ │Thread 1│ │Thread 2│ │ T3  ││
-        │ │ Stack  │ │ Stack  │ │Stack││
-        │ └────────┘ └────────┘ └─────┘│
-        │                              │
-        └──────────────────────────────┘
-```
-
 # 3. Race Condition
 
-## What is Concurrency?
+## 3.1 What is Concurrency?
 
 > Concurrency mean that two threads run simultaneously.  
 
 In reality, only one thread is executed by the CPU at a time, but the CPU can rapidly switch between threads to create the effect of them executing in parallel.
 
-## Race Condition
+## 3.2 Race Condition
 
 > A race condition is an error where the program's outcome depends on the uncontrolled order or interleaving of threads.
 
@@ -577,11 +441,11 @@ void *rountine(void *arg)
 int main(int argc, char *argv[])
 {
     int x = 0;
-    /* i will create 1000 thread */
+    /* I will create 1000 thread */
     int numthread = 1000;
     pthread_t thread_id[numthread];
 
-    /* create thread */
+    /* create thread and run the routine function with the argument is x */
     for (int i = 0; i < numthread; i++)
     {
         if (pthread_create(&thread_id[i], NULL, rountine, &x) != 0)
@@ -613,23 +477,6 @@ x = 994728
 ```
 
 As we expected, x must be 1000000, but actually, x is 994728. It is **race condition**.  
-How to detect race condition?
-
-```text
-① Are there multiple threads? 
-↓
-② What data do they share? 
-↓
-③ Who reads? 
-↓
-④ Who writes? 
-↓
-⑤ Can accesses occur concurrently? 
-↓
-⑥ Is there synchronization? 
-↓
-⑦ Does the result depend on the execution order?
-```
 
 We can fix it by using a variable `lock` following example below:
 
@@ -658,7 +505,7 @@ In fact, we have a interface in `phtread` library that allows us to do that. `pt
 
 # 4. Thread Synchronization
 
-## pthread_mutex
+## 4.1 pthread_mutex
 
 > Mutex = Mutual Exclusion
 
@@ -680,7 +527,7 @@ pthread_mutex_lock(&mutex);
 pthread_mutex_unlock(&mutex);
 ```
 
-Example:
+Example: I will use the example provided in section ***3.2 Race condition***. But now, I use `pthread_mutex` to protect the increment operation.
 
 ```c
 #include <stdio.h>
@@ -701,40 +548,6 @@ void *rountine(void *arg)
 
     return NULL;
 }
-
-int main(int argc, char *argv[])
-{
-    int x = 0;
-    /* i will create 1000 thread */
-    int numthread = 1000;
-    pthread_t thread_id[numthread];
-
-
-    /* create thread */
-    for (int i = 0; i < numthread; i++)
-    {
-        if (pthread_create(&thread_id[i], NULL, rountine, &x) != 0)
-        {
-            printf("Create thread %d fail.\n", i + 1);
-            return (i + 1);
-        }
-    }
-
-    /* join thread */
-    for (int i = 0; i < numthread; i++)
-    {
-        if (pthread_join(thread_id[i], NULL) != 0)
-        {
-            printf("join thread %d fail.\n", i + 1);
-            return (i + 101);
-        }
-    }
-
-    /* ptint out the value of x after 1000 thread run */
-    printf("x = %d\n", x);
-
-    return 0;
-}
 ```
 
 ```text
@@ -742,10 +555,6 @@ x = 1000000
 ```
 
 That's right, the results are exactly as we expected.
-
-### Critical Section
-
-> Critial section is a segment of code that accesses a shared resource that we want to control concurrent execution by multiple threads.
 
 **A quick note:**  
 If thread 1 uses `pthread_mutex_lock` but thread 2 doesn't use it, thread 2 can still access the variable being protected by thread 1.  
@@ -758,6 +567,7 @@ Example:
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
+/* Thread 1 use mutex to lock critical section */
 void *rountine(void *arg)
 {
     int *p = arg;
@@ -772,6 +582,9 @@ void *rountine(void *arg)
     return NULL;
 }
 
+/*
+Thread don't use mutex and is able to access to critical section
+*/
 void *rountine1(void *arg)
 {
     int *p = arg;
@@ -787,7 +600,7 @@ void *rountine1(void *arg)
 int main(int argc, char *argv[])
 {
     int x = 0;
-    /* i will create 1000 thread */
+    /* I will create 1000 thread */
     int numthread = 1000;
     pthread_t thread_id[numthread];
     pthread_t id;
@@ -832,7 +645,27 @@ x = 1000954
 
 The result I expected is 1001000 but as we can see, it is 1000954. Why is that? Because there is a thread that does not use the mutex, so it can access the variable x while it is being protected. It is race condition.
 
-### trylock
+### What is Critical section?
+
+> A critical section is a segment of code that accesses a shared resource and for which we want to control concurrent execution by multiple threads.
+
+In the `pthread_mutex` example above, the code `*p += 1;` is protected by `lock` and `unlock` operations; this is a critical section.
+
+### try_lock
+
+If a thread simply wants to attempt to acquire a lock without being blocked while waiting for it to be released, it can perform other operations upon a failed attempt and then try to acquire the lock again if necessary.
+
+Prototype:
+
+```c
+int pthread_mutex_trylock (pthread_mutex_t *__mutex)
+```
+
+Return:
+
+- 0: The lock was successfully acquired.
+- EBUSY: The mutex is already locked by another thread.
+- Other error code: A system failure occurred.
 
 Example:
 
@@ -840,71 +673,76 @@ Example:
 #include <stdio.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <errno.h>
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t my_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-void *routine1(void *arg)
-{
-    printf("Thread 1 will lock and sleep 5 seconds.\n");
-    pthread_mutex_lock(&mutex);
-    sleep(5);
-    pthread_mutex_unlock(&mutex);
-    printf("Thread 1 unlock.\n");
+/*
+funtion lock
+*/
+void* thread_function1(void* arg) {
+    printf("[Thread 1] Locked in 2 seconds.\n");
+    pthread_mutex_lock(&my_mutex);
+    
+    sleep(2);
+    
+    pthread_mutex_unlock(&my_mutex);
+    printf("[Thread 1] Lock released.\n");
     return NULL;
 }
 
-void *routine2(void *arg)
-{
-    sleep(1);
-    printf("Thread 2 try to lock during the thread 1 lock.\n");
-    if(pthread_mutex_trylock(&mutex) == 0)
-    {
-
+/*
+function try lock
+*/
+void* thread_function2(void* arg) {
+    sleep(0.5);
+    
+    for (int i = 0; i < 100; i++) {
+        int result = pthread_mutex_trylock(&my_mutex);
+        
+        /* try lock success */
+        if (result == 0) {
+            printf("[Thread 2] Try lock success at %d times.\n", i + 1);
+            pthread_mutex_unlock(&my_mutex);
+            break;
+        }
+        /* lock busy */
+        else if (result == EBUSY) {
+            printf("[Thread 2] Lock busy on attempt %d.\n", i + 1);
+            sleep(1);
+        }
+        /* try lock error */
+        else {
+            printf("[Thread 2] An error occurred.\n");
+            break;
+        }
     }
-    else
-    {
-        printf("Thread 2 try to lock fail.\n");
-    }
-
     return NULL;
 }
 
-int main(int argc, char *argv[])
-{
-    pthread_t thid1, thid2;
+int main() {
+    pthread_t thread1, thread2;
 
-    pthread_create(&thid1, NULL, routine1, NULL);
-    pthread_create(&thid2, NULL, routine2, NULL);
+    pthread_create(&thread1, NULL, thread_function1, NULL);
+    pthread_create(&thread2, NULL, thread_function2, NULL);
 
-    pthread_join(thid1, NULL);
-    pthread_join(thid2, NULL);
-
+    pthread_join(thread1, NULL);
+    pthread_join(thread2, NULL);
+    
+    pthread_mutex_destroy(&my_mutex);
     return 0;
 }
 ```
 
 ```text
-Thread 1 will lock and sleep 5 seconds.
-Thread 2 try to lock during the thread 1 lock.
-Thread 2 try to lock fail.
-Thread 1 unlock.
+[Thread 1] Locked in 2 seconds.
+[Thread 2] Lock busy on attempt 1.
+[Thread 2] Lock busy on attempt 2.
+[Thread 1] Lock released.
+[Thread 2] Try lock success at 3 times.
 ```
 
-## Atomic instructions
-
-**Define:**
-
-> An operation is observed as a unit that can not be interleaved by another thread.
-
-### Compare-and-Swap — CAS
-
-Concept:
-
-```text
-CAS(address, expected, new_value)
-```
-
-## spin lock
+### spin lock
 
 Concept:
 
@@ -936,10 +774,10 @@ while (CAS(&lock, 0, 1) != SUCCESS)
           └────────────► retry
 ```
 
-**Spin lock has a problem**:  
+***Spin lock has a problem***:  
 If thread 1 is occupying the critical section, thread 2 will continously attempt to access it until successful. Therefore, thread 2 consumes CPU to wait. This is **Busy Waiting/ Spinning**.
 
-## Blocking Lock
+### Blocking Lock
 
 Thread 2 will no longer attempt to access the critical section; instead, it will enter a sleep state and be awakened by the system when Thread 1 unlocks it.
 
@@ -977,143 +815,16 @@ T2
 | Long hold time | Poor | Good |
 | Implementation | Atomic instructions | Atomic + wait/wakeup |
 
-## Futex
-
-> futex = fast userspace mutex
-
-Futex is a Linux mechanism provided to support:  
-
-> Thread wait/wake based on a value in userspace.
-
-# 5. Mars Pathfinder & Priority Inversion
-
-## Mars Pathfinder
-
-In 1997, the Mars Pathfinder spacecraft was operating on Mars.
-
-Its onboard system utilized the VxWorks real-time operating system.
-
-A shared resource was protected by a synchronization mechanism.
-
-A low-priority task held the resource.
-
-A high-priority task required that resource.
-
-Subsequently, a medium-priority task began executing.
-
-As a result, the high-priority task was blocked for longer than expected.
-
-The system featured a watchdog timer; when a critical task failed to execute within the expected timeframe, the system would reset.
-
-The situation was identified as priority inversion, and the control team resolved it using a priority inheritance mechanism.
-
-## Priority Inversion
-
-> A mutex solves the race condition problem but introduces a new issue: priority inversion. A higher-priority thread can be blocked by a lower-priority thread.
-
-## Solution: Priority Inheritance
-
-If a high-priority thread is waiting for a mutex held by a low-priority thread, temporarily raise the priority of the low-priority thread.
-
-Timeline after Priority Inheritance is implemented:
-
-```text
-        L                 H                 M
-        │                 │                 │
-t1      LOCK
-        │
-        │ priority = LOW
-        │
-t2                        LOCK
-                          │
-                          BLOCK
-                          │
-t3      priority ↑
-        LOW → HIGH
-        │
-        RUN
-        │
-t4      critical section
-        │
-t5      UNLOCK
-        │
-        ▼
-        H wakes
-```
-
-After L unlock:
-
-```text
-L priority
-HIGH → LOW
-```
-
-## Lessons from Mars Pathfinder
-
-- Mutex solves race conditions but does not solve every concurrency problem.
-- Critical section must be carefully designed.
-
-```text
-short
-predictable
-bounded
-```
-
-- Scheduling and synchronization are closely related.
-
-We don't research Mutex in complete isolation from:
-
-```text
-scheduler
-priority
-blocking
-wakeup
-```
-
-# 6. Reader-Writer Lock
+## 4.2 Reader-Writer Lock
 
 > A Reader-Writer Lock (rwlock) is a synchronization primitive designed for scenarios where a shared resource involves two types of access:
 
 - Reader: only read
 - writer: change data
 
-Basic rules:
-
-```text
-              Shared Data
-                  │
-        ┌─────────┴─────────┐
-        │                   │
-     READERS              WRITER
-        │                   │
-    Multiple users       A single
-    simultaneously         user
-```
-
-If there are only readers:
-
-```text
-T1 ── READ ──┐
-T2 ── READ ──┤
-T3 ── READ ──┤──► shared data
-T4 ── READ ──┘
-```
-
-But when a writer appears:
-
-```text
-T1 ── READ ──┐
-T2 ── READ ──┤
-T3 ── READ ──┘
-
-W ─────────────── WAIT
-```
-
-The writer must wait for all current readers to release the lock.
-
-## Prototype in POSIC Thread
-
-POSIC Thread provide: `pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER`
+If there are multiple threads but they only need to read data, they can access the shared data simultaneously.  
+If a thread wants to write data, it must wait for all current readers to release the lock.  
+And if one thread is writing data while another wants to read it, the reading thread must wait for the writing thread to release the lock.  
 
 Prototype:
 
@@ -1133,7 +844,95 @@ Prototype:
     pthread_rwlock_unlock(&rwlock);
 ```
 
-## When we use rwlock?
+Example I will create 200 reading threads and after I have created 100 reading threads, I create writing thread to wite data to `x`:
+
+```c
+#include <stdio.h>
+#include <pthread.h>
+#include <unistd.h>
+
+pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
+pthread_t thid1[2000], thid2;
+
+int x = 0;
+
+void *reader(void *arg)
+{
+    printf("Thread read x: ");
+    pthread_rwlock_rdlock(&rwlock);
+    printf("%d\n", x);
+    pthread_rwlock_unlock(&rwlock);
+
+    return NULL;
+}
+
+void *writer(void *arg)
+{
+    printf("Thread will add 10 to x.\n");
+    pthread_rwlock_wrlock(&rwlock);
+    x += 10;
+    pthread_rwlock_unlock(&rwlock);
+    printf("Thread write unlock.\n");
+    return NULL;
+}
+
+int main(int argc, char *argv[])
+{
+    /* create 200 thread reader  */
+    for (int i = 0; i < 200; i++)
+    {
+        if (i == 100)
+        {
+            /* create thread writer */
+            if (pthread_create(&thid2, NULL, writer, NULL) != 0)
+            {
+                printf("Create thread writer fail.\n");
+                return -99999;
+            }
+        }
+        if (pthread_create(&thid1[i], NULL, reader, NULL) != 0)
+        {
+            printf("Create thread %d fail.\n", i + 1);
+            return -(i + 1);
+        }
+    }
+
+    /* join thread reader */
+    for (int i = 0; i < 200; i++)
+    {
+        if (pthread_join(thid1[i], NULL) != 0)
+        {
+            printf("Join thread %d fail.\n", i + 1);
+            return -(i + 1);
+        }
+    }
+
+    /* join thread writer */
+    pthread_join(thid2, NULL);
+
+    return 0;
+}
+```
+
+```text
+Thread read x: 0
+Thread read x: 0
+Thread read x: 0
+Thread read x: 0
+Thread will add 10 to x.
+Thread write unlock.
+Thread read x: 10
+Thread read x: 10
+Thread read x: 10
+Thread read x: 10
+Thread read x: 10
+```
+
+As we can see, while the writing thread writes data, no reading thread is permitted to read data.
+
+### When we use rwlock?# 7. Reentrancy & Thread-Specific Data
+
+A function is called reentrant if multiple executions of the function can occur concurrently without corrupting each other's state.
 
 rwlock is suitable when:
 
@@ -1149,8 +948,9 @@ When reader = writer, mutex may be a better choice. Because the writer appears f
 - more complex than a `mutex`
 - If readers keep arriving, the writer might have to wait a very long time, and vice versa.
 
-# 7. Reentrancy & Thread-Specific Data
+# 5. Reentrancy & Thread-Specific Data
 
+## 5.1 Reentrancy
 A function is called reentrant if multiple executions of the function can occur concurrently without corrupting each other's state.
 
 Example:
@@ -1169,85 +969,32 @@ T1 → add(1, 2)
 T2 → add(10, 20)
 ```
 
-There are no issues because the function does not use shared mutable state.
+There are no issues because the function does not use shared mutable state. Each thread has its own state.
 
-```text
-add()
-/     \
-T1       T2
-│         │
-local       local
-data        data
-```
+***A reentrant function typically must satisfy the following conditions:***
 
-Each invocation has its own state.
+- Do not use static or global data to store mutable state.
+- Do not return a pointer to shared static memory.
+- Do not call non-reentrant functions.
 
-## Shared multiple state
+Examole:
 
 ```c
-char *get_name(void)
+void foo(void)
 {
-static char buffer[100]; 
-
-strcpy(buffer, "Hung"); 
-
-return buffer;
+    printf("hello");
 }
 ```
 
-A single thread:
+If `printf()` is not safe in the context under consideration, then `foo()` cannot be considered reentrant either.
 
-```c
-char *p = get_name();
-```
+***Rule***
 
-can run normally.
+> A reentrant function must not rely on its own mutable shared state
 
-But if multiple threads call it:
+## 5.2 Thread-Specific Data
 
-```text
-T1 ── get_name()
-T2 ── get_name()
-```
-
-both use the same:
-
-```c
-static char buffer[100];
-```
-
-This is ***shared mutable state.***
-
-The timeline could be:
-
-```text
-T1                         T2
-│                          │
-│ write "Hung"             │
-│                          │
-│                          │ write "ABC"
-│                          │
-│ return buffer            │
-│                          │
-▼                          ▼
-```
-
-Both operate on the same buffer.
-
-This function is ***not reentrant***.
-
-## Note
-
-A function may be a non-reentrant if it use:
-
-- Static mutable data
-- Global mutable data
-- Shared buffer
-- Shared resource is not synchronizied
-
-## Thread-Specific Data
-
-> Each thread has specific data.
+> *Thread-Specific Data* addresses the scenario where a function requires data that is "thread-specific," but placing that data on the stack is inconvenient.
 
 Example:
 
@@ -1262,10 +1009,37 @@ Example:
      buffer    buffer     buffer
 ```
 
-Consider the following:  
-The data is not global across all functions in the thread, yet you want to use it in every function without passing it as a parameter. You can use **specific data**.
+**Why don't we use local variable instead of Thread-Specific Data?**
 
-***POSIX provides pthread_key_t.***
+The answer lies in lifetime and accessibility:
+
+- Local variables → suitable when data is needed only within the scope of a single function.
+- Thread-specific data → suitable when data needs to persist across multiple function calls within the same thread, without the need to pass it as a parameter each time. But it is still specific with each thread.
+
+Example:
+
+```text
+Thread 
+|
+│   create TSD 
+|
+├── function_A() 
+│       │ 
+│       └── do somethings
+│ 
+├── function_B() 
+│       │ 
+│       └── do somethings
+│ 
+├── function_C() 
+        │ 
+        └── take TSD 
+
+```
+
+Function C can get *Thread-Specific Data* without needing to pass it as a parameter
+
+**POSIX provides *pthread_key_t.***
 
 ```c
 pthread_key_t key;
@@ -1406,43 +1180,238 @@ int main(void)
 }
 ```
 
-When we use thread specific data?
+```text
+Thread 125320822781504: set buffer = 0x71fa871fee20
+Thread 125320822781504: buffer = 0x71fa871fee20, content = Hello1
+Thread 125320814388800: set buffer = 0x71fa869fde20
+Thread 125320814388800: buffer = 0x71fa869fde20, content = Hello2
+Thread 125320814388800: buffer = 0x71fa869fde20, content = Hello2
+Thread 125320822781504: buffer = 0x71fa871fee20, content = Hello1
+```
+
+As we can see two thread have its specific data. The `process_data` and `log_data` function can write and read from `buffer` without needing to pass any parameters related to the `buffer`.
+
+# 6. Threads and Signals, Threads and fork, Threads and I/O
+
+## 6.1 Thread and Signal
+
+In Linux/POSIX, a signal is an asynchronous notification mechanism between the kernel and a process or thread, used to indicate that a specific event has occurred.
+
+Signals are used for events where the specific timing is unknown; instead of continuously polling to check for status, one can use a signal to notify the program that an event has occurred.
+
+We can send an signal to the thread by using:
+
+`pthread_kill(id, signal)`
+
+And add a handle function to signal by using function:
+
+`signal(int __sig, (*__sighandler_t)(int))`
+
+Example main function send SIGTERM signal to thread 3:
+
+```c
+#include <stdio.h>
+#include <pthread.h>
+#include <signal.h>
+#include <unistd.h>
+
+/*
+function to handle signal
+*/
+void signal_handler(int sig)
+{
+    printf("Thread %lu received signal %d\n",pthread_self(), sig);
+}
+
+/*
+routine function that thread will run
+*/
+void *routine(void *arg)
+{
+    int id = *(int *)arg;
+
+    printf("Thread %d is sleeping.\n", id);
+    sleep(10);
+    printf("Thread %d is stopped.\n", id);
+    return NULL;
+}
+
+int main(int argc, char *argv[])
+{
+    int numthread = 5;
+    int id[] = {1, 2, 3, 4, 5};
+    pthread_t thread_id[5];
+
+    /* create signal */
+    signal(SIGTERM, signal_handler);
+
+    /* create thread */
+    for (int i = 0; i < numthread; i++)
+    {
+        if (pthread_create(&thread_id[i], NULL, routine, &id[i]) != 0)
+        {
+            printf("Create thread %d fail.\n", i + 1);
+            return (i + 1);
+        }
+    }
+
+    sleep(1);
+    printf("main thread send signal to thread 3.\n");
+    sleep(1);
+
+    /* send signal to thread 3 */
+    pthread_kill(thread_id[2], SIGTERM);
+
+    /* join thread */
+    for (int i = 0; i < numthread; i++)
+    {
+        if (pthread_join(thread_id[i], NULL) != 0)
+        {
+            printf("join thread %d fail.\n", i + 1);
+            return (i + 101);
+        }
+    }
+
+    return 0;
+}
+```
 
 ```text
-"Many threads"
-       +
-"Each thread needs its own state"
-       +
-"That state must survive across multiple function calls"
+Thread 1 is sleeping.
+Thread 2 is sleeping.
+Thread 4 is sleeping.
+Thread 5 is sleeping.
+Thread 3 is sleeping.
+main thread send signal to thread 3.
+Thread 138368958584384 received signal 15
+Thread 3 is stopped.
+Thread 1 is stopped.
+Thread 2 is stopped.
+Thread 4 is stopped.
+Thread 5 is stopped.
 ```
 
-TSD only starts to become helpful when the call graph looks like this:
+The main thread sends a signal to thread 3 while it is sleeping, causing it to wake up, process the signal, and resume execution.
+
+If we don't use handle function, we can pass `NULL` as a argument to `signal(SIGTERM, NULL);`. the signal will be process with default action.  
+Example `SIGTERM` typically causes the process to terminate.
+
+Using the same example as before, but without using the `signal_handler` function and passing `NULL` to the `signal` function: `signal(SIGTERM, NULL);`, the program will be terminated when the signal is sent and processed by thread 3.
+
+```text
+Thread 1 is sleeping.
+Thread 2 is sleeping.
+Thread 4 is sleeping.
+Thread 3 is sleeping.
+Thread 5 is sleeping.
+main thread send signal to thread 3.
+Terminated
+```
+
+### Thread Mask
+
+We can make a thread temporarily ignore a signal by using:
 
 ```c
-void A()
-{
-    B();
-}
-
-void B()
-{
-    C();
-}
-
-void C()
-{
-    // need data of thread
-}
+sigset_t set;
+sigemptyset(&set);
+sigaddset(&set, SIGTERM);
+pthread_sigmask(SIG_BLOCK, &set, NULL);
 ```
 
-Function C can do: `pthread_getspecific(key)` without needing do:
+And unblock it: `pthread_sigmask(SIG_BLOCK, &set, NULL);`
+
+If a signal is sent to process by using `kill()`. The kernel selects a thread that is not blocking the signal for delivery. If all threads are blocking it, the signal remains in a pending state.
+
+Example all thread block signal:
 
 ```c
-A(buffer);
-B(buffer);
-C(buffer);
+#include <stdio.h>
+#include <pthread.h>
+#include <signal.h>
+#include <unistd.h>
+
+int numthread = 5;
+int id[] = {1, 2, 3, 4, 5};
+pthread_t thread_id[5];
+sigset_t set;
+
+/*
+function to handle signal
+*/
+void signal_handler(int sig)
+{
+    printf("Thread %lu received signal %d\n",pthread_self(), sig);
+}
+
+/*
+routine function that thread will run
+*/
+void *routine(void *arg)
+{
+    int id = *(int *)arg;
+
+    printf("Thread %d is sleeping.\n", id);
+    sleep(10);
+    printf("Thread %d is stopped.\n", id);
+    return NULL;
+}
+
+int main(int argc, char *argv[])
+{
+    /* create signal */
+    signal(SIGTERM, signal_handler);
+
+    /* create signal mask block signal */
+    sigemptyset(&set);
+    sigaddset(&set, SIGTERM);
+    pthread_sigmask(SIG_BLOCK, &set, NULL);
+
+    /* create thread */
+    for (int i = 0; i < numthread; i++)
+    {
+        if (pthread_create(&thread_id[i], NULL, routine, &id[i]) != 0)
+        {
+            printf("Create thread %d fail.\n", i + 1);
+            return (i + 1);
+        }
+    }
+
+    sleep(1);
+    printf("main thread send signal to process.\n");
+    sleep(1);
+
+    /* send signal to current process */
+    kill(getpid(), SIGTERM);
+
+    /* join thread */
+    for (int i = 0; i < numthread; i++)
+    {
+        if (pthread_join(thread_id[i], NULL) != 0)
+        {
+            printf("join thread %d fail.\n", i + 1);
+            return (i + 101);
+        }
+    }
+
+    return 0;
+}
 ```
 
-# 8. Threads and Signals
+```text
+Thread 1 is sleeping.
+Thread 2 is sleeping.
+Thread 3 is sleeping.
+Thread 5 is sleeping.
+Thread 4 is sleeping.
+main thread send signal to process.
+Thread 1 is stopped.
+Thread 2 is stopped.
+Thread 3 is stopped.
+Thread 5 is stopped.
+Thread 4 is stopped.
+```
 
-***Signal = an asynchronous notification sent to a process or thread.***
+The signal is sent but no thread processes, it will be pending state until the process terminate.
+
+## 6.2 Thread and fork()
